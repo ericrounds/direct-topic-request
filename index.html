@@ -272,6 +272,7 @@
     if (!payload.topic) {
       statusEl.textContent = 'Please enter a topic or headline.';
       statusEl.className = 'error';
+      statusEl.style.display = 'block';
       btn.disabled = false;
       btn.textContent = 'Submit Topic Request';
       return;
@@ -280,28 +281,31 @@
     if (!payload.email) {
       statusEl.textContent = 'Please enter your email address.';
       statusEl.className = 'error';
+      statusEl.style.display = 'block';
       btn.disabled = false;
       btn.textContent = 'Submit Topic Request';
       return;
     }
 
+    // The webhook endpoint does not return CORS headers for this origin, so a normal
+    // 'cors' fetch that reads the response gets blocked by the browser before JS ever
+    // sees a status code, surfacing as a generic network error even though the POST
+    // reaches the server successfully. Sending the request as a "simple request"
+    // (mode: 'no-cors', text/plain content type, so no preflight is triggered) avoids
+    // that browser-side block. The response is opaque in no-cors mode, so we cannot
+    // read res.ok - a fetch call that does not throw is treated as a successful send.
     try {
-      const res = await fetch(WEBHOOK_URL, {
+      await fetch(WEBHOOK_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify(payload)
       });
-      if (res.ok) {
-        form.reset();
-        document.getElementById('submitter').value = 'Your Name';
-        showSuccessScreen();
-      } else {
-        statusEl.textContent = 'Something went wrong submitting the form. Please try again in a moment.';
-        statusEl.className = 'error';
-        statusEl.style.display = 'block';
-      }
+      form.reset();
+      document.getElementById('submitter').value = 'Your Name';
+      showSuccessScreen();
     } catch (err) {
-      statusEl.textContent = 'Network error submitting the form. Please try again.';
+      statusEl.textContent = 'Network error submitting the form. Please check your connection and try again.';
       statusEl.className = 'error';
       statusEl.style.display = 'block';
     }

@@ -184,6 +184,12 @@
       <button type="submit" id="submitBtn">Submit Topic Request</button>
       <div id="status"></div>
     </form>
+    <div id="successScreen" style="display:none; text-align:center; padding:20px 0;">
+      <div style="font-size:48px; line-height:1; margin-bottom:16px;">&#9989;</div>
+      <h2 style="color:#0b1f3a; font-size:20px; margin:0 0 10px 0;">Submitted!</h2>
+      <p style="color:#5a6472; font-size:15px; line-height:1.6; margin:0 0 24px 0;">Your topic is being researched and a script will be drafted shortly.</p>
+      <button type="button" id="submitAnotherBtn" style="width:auto; padding:10px 24px; background:#f4f6f9; color:#0b1f3a; border:1.5px solid #d9dfe7; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer;">Submit Another Topic</button>
+    </div>
     <div class="footer-note">Direct Topic Request &middot; routes to the content generation pipeline</div>
   </div>
 
@@ -231,6 +237,22 @@
   const form = document.getElementById('topicForm');
   const statusEl = document.getElementById('status');
   const btn = document.getElementById('submitBtn');
+  const successScreen = document.getElementById('successScreen');
+  const submitAnotherBtn = document.getElementById('submitAnotherBtn');
+
+  function showSuccessScreen() {
+    form.style.display = 'none';
+    successScreen.style.display = 'block';
+  }
+
+  function showFormAgain() {
+    successScreen.style.display = 'none';
+    form.style.display = 'block';
+    statusEl.className = '';
+    statusEl.style.display = 'none';
+  }
+
+  submitAnotherBtn.addEventListener('click', showFormAgain);
 
   form.addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -270,17 +292,18 @@
         body: JSON.stringify(payload)
       });
       if (res.ok) {
-        statusEl.textContent = "Thanks! Your topic request has been submitted and queued for research and script generation.";
-        statusEl.className = 'success';
         form.reset();
         document.getElementById('submitter').value = 'Your Name';
+        showSuccessScreen();
       } else {
         statusEl.textContent = 'Something went wrong submitting the form. Please try again in a moment.';
         statusEl.className = 'error';
+        statusEl.style.display = 'block';
       }
     } catch (err) {
       statusEl.textContent = 'Network error submitting the form. Please try again.';
       statusEl.className = 'error';
+      statusEl.style.display = 'block';
     }
     btn.disabled = false;
     btn.textContent = 'Submit Topic Request';

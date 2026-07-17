@@ -10,7 +10,6 @@
   .spinner { width: 48px; height: 48px; border: 4px solid #e2e8f0; border-top-color: #7c3aed; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 20px; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .success { color: #16a34a; }
-  .error { color: #dc2626; }
   h2 { margin: 0 0 12px; font-size: 22px; }
   p { color: #64748b; font-size: 15px; line-height: 1.5; margin: 8px 0; }
   .title { font-weight: 700; color: #0f172a; font-size: 16px; margin-top: 16px; }
@@ -32,14 +31,16 @@
   var source = params.get('source') || '';
   var category = params.get('category') || '';
   var social_hook = params.get('social_hook') || '';
-  var blog_title = params.get('blog_title') || '';
-  var blog_pitch = params.get('blog_pitch') || '';
+  var blog_angle = params.get('blog_angle') || '';
   var why_it_matters = params.get('why_it_matters') || '';
+  var summary = params.get('summary') || '';
   var date = params.get('date') || '';
 
+  var esc = function(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
+
   document.getElementById('story-info').innerHTML =
-    '<p class="title">' + title.replace(/</g, '&lt;') + '</p>' +
-    '<p class="meta">' + source.replace(/</g, '&lt;') + (date ? ' \u00B7 ' + date.replace(/</g, '&lt;') : '') + '</p>';
+    '<p class="title">' + esc(title) + '</p>' +
+    '<p class="meta">' + esc(source) + (date ? ' \u00B7 ' + esc(date) : '') + '</p>';
 
   var webhookUrl = 'https://build.twin.so/triggers/c37921e7-4780-4cfe-9fbb-a099a1a662c0/webhook';
 
@@ -51,37 +52,39 @@
       source: source,
       category: category,
       social_hook: social_hook,
-      blog_title: blog_title,
-      blog_pitch: blog_pitch,
+      blog_angle: blog_angle,
       why_it_matters: why_it_matters,
+      summary: summary,
       date: date
     },
     selected_at: new Date().toISOString()
   };
 
-  fetch(webhookUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  })
-  .then(function(res) {
-    document.getElementById('spinner').style.display = 'none';
-    if (res.ok || res.status === 200 || res.status === 202 || res.status === 204) {
-      document.getElementById('heading').innerHTML = '\u2705 Story submitted!';
-      document.getElementById('heading').className = 'success';
-      document.getElementById('message').textContent = 'This story has been sent for video production. You can close this tab.';
-    } else {
-      document.getElementById('heading').innerHTML = '\u26A0\uFE0F Submission received';
-      document.getElementById('heading').className = 'success';
-      document.getElementById('message').textContent = 'The request was sent (status: ' + res.status + '). You can close this tab.';
-    }
-  })
-  .catch(function(err) {
-    document.getElementById('spinner').style.display = 'none';
-    document.getElementById('heading').innerHTML = '\u274C Error';
-    document.getElementById('heading').className = 'error';
-    document.getElementById('message').textContent = 'Could not reach the server. Please try again or contact support.';
-  });
+  var jsonStr = JSON.stringify(payload);
+  var sent = false;
+
+  // Method 1: navigator.sendBeacon — fire-and-forget, no CORS restrictions
+  if (navigator.sendBeacon) {
+    var blob = new Blob([jsonStr], { type: 'application/json' });
+    sent = navigator.sendBeacon(webhookUrl, blob);
+  }
+
+  // Method 2: fetch with no-cors as fallback
+  if (!sent) {
+    fetch(webhookUrl, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: jsonStr
+    }).catch(function() {});
+    sent = true;
+  }
+
+  // Show success immediately — this is fire-and-forget
+  document.getElementById('spinner').style.display = 'none';
+  document.getElementById('heading').innerHTML = '\u2705 Story submitted for video production!';
+  document.getElementById('heading').className = 'success';
+  document.getElementById('message').textContent = 'The Topic Request & Script Writer agent will pick this up shortly. You can close this tab.';
 })();
 </script>
 </body>

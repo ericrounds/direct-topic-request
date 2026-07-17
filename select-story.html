@@ -5,129 +5,86 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Story Selected for Video</title>
 <style>
-  :root {
-    --navy: #0b1f3a;
-    --navy-light: #14315c;
-    --accent: #f2a900;
-    --bg: #f4f6f9;
-    --text: #1a2433;
-    --muted: #5a6472;
-    --border: #d9dfe7;
-    --success: #1e7e34;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 32px 16px;
-  }
-  .card {
-    background: #fff;
-    max-width: 640px;
-    width: 100%;
-    border-radius: 14px;
-    box-shadow: 0 10px 40px rgba(11,31,58,0.12);
-    overflow: hidden;
-  }
-  .header {
-    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
-    padding: 32px 36px;
-    color: #fff;
-  }
-  .header .eyebrow {
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    font-size: 12px;
-    color: var(--accent);
-    font-weight: 700;
-    margin-bottom: 8px;
-  }
-  .header h1 { margin: 0; font-size: 22px; line-height: 1.3; }
-  .body-content { padding: 28px 36px; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background: #f8fafc; color: #1f2937; margin: 0; padding: 40px 16px; }
+  .container { max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 32px; }
   .status { text-align: center; margin-bottom: 24px; }
   .status .icon { font-size: 48px; margin-bottom: 12px; }
-  .status h2 { font-size: 20px; margin: 0 0 8px; color: var(--success); }
-  .status p { font-size: 14px; color: var(--muted); margin: 0; }
-  .story-preview {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 20px;
-    margin-top: 20px;
-  }
-  .story-preview h3 { margin: 0 0 8px; font-size: 16px; color: var(--navy); }
-  .story-preview .meta { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
-  .story-preview p { font-size: 14px; line-height: 1.5; margin: 0; }
-  .error { color: #c0392b; }
-  .loading h2 { color: var(--navy); }
+  .status h1 { font-size: 22px; font-weight: 700; color: #0f172a; margin: 0 0 8px; }
+  .status p { font-size: 15px; color: #64748b; margin: 0; }
+  .story-card { border: 1px solid #e2e8f0; border-radius: 6px; padding: 16px; margin-top: 20px; }
+  .story-card h2 { font-size: 17px; font-weight: 700; color: #0f172a; margin: 0 0 8px; }
+  .story-card .meta { font-size: 13px; color: #64748b; margin-bottom: 8px; }
+  .story-card .summary { font-size: 14px; line-height: 1.55; color: #374151; }
+  .error { color: #dc2626; text-align: center; }
+  .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid #e2e8f0; border-top-color: #7c3aed; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 8px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
-<div class="card">
-  <div class="header">
-    <div class="eyebrow">Elevator Industry Daily</div>
-    <h1>Video Story Selection</h1>
+<div class="container">
+  <div class="status" id="status">
+    <div class="icon"><span class="spinner"></span></div>
+    <h1>Submitting story for video production...</h1>
+    <p>Please wait a moment.</p>
   </div>
-  <div class="body-content">
-    <div class="status" id="status">
-      <div class="icon">\u23F3</div>
-      <h2 class="loading">Submitting story...</h2>
-      <p>Sending to the Script Writer agent for processing.</p>
-    </div>
-    <div class="story-preview" id="preview" style="display:none;"></div>
+  <div class="story-card" id="story-card" style="display:none;">
+    <h2 id="story-title"></h2>
+    <div class="meta" id="story-meta"></div>
+    <div class="summary" id="story-summary"></div>
   </div>
 </div>
 <script>
 (function() {
-  const params = new URLSearchParams(window.location.search);
-  const story = {
-    title: params.get('title') || '',
-    url: params.get('url') || '',
-    summary: params.get('summary') || '',
-    source: params.get('source') || '',
-    category: params.get('category') || '',
-    social_hook: params.get('social_hook') || '',
-    blog_angle: params.get('blog_angle') || '',
-    why_it_matters: params.get('why_it_matters') || ''
-  };
+  var params = new URLSearchParams(window.location.search);
+  var title = params.get('title') || '';
+  var url = params.get('url') || '';
+  var summary = params.get('summary') || '';
+  var source = params.get('source') || '';
+  var category = params.get('category') || '';
+  var social_hook = params.get('social_hook') || '';
+  var blog_angle = params.get('blog_angle') || '';
+  var why_it_matters = params.get('why_it_matters') || '';
 
-  // Show preview
-  if (story.title) {
-    var preview = document.getElementById('preview');
-    preview.style.display = 'block';
-    preview.innerHTML = '<h3>' + story.title.replace(/</g,'&lt;') + '</h3>'
-      + '<div class="meta">' + story.source.replace(/</g,'&lt;') + ' &middot; ' + story.category.replace(/</g,'&lt;') + '</div>'
-      + '<p>' + (story.summary.length > 200 ? story.summary.substring(0,200).replace(/</g,'&lt;') + '...' : story.summary.replace(/</g,'&lt;')) + '</p>';
+  // Show story card
+  if (title) {
+    document.getElementById('story-title').textContent = title;
+    document.getElementById('story-meta').textContent = source + (category ? ' | ' + category : '');
+    document.getElementById('story-summary').textContent = summary.substring(0, 300) + (summary.length > 300 ? '...' : '');
+    document.getElementById('story-card').style.display = 'block';
   }
 
+  // POST to webhook
   var webhookUrl = 'https://build.twin.so/triggers/c37921e7-4780-4cfe-9fbb-a099a1a662c0/webhook';
-  var statusEl = document.getElementById('status');
-
-  if (!story.title) {
-    statusEl.innerHTML = '<div class="icon">\u26A0\uFE0F</div><h2 class="error">No story data</h2><p>This link appears to be missing story information. Please try clicking the link from your email again.</p>';
-    return;
-  }
+  var payload = {
+    event: 'story.selected',
+    story: {
+      title: title,
+      url: url,
+      summary: summary,
+      source: source,
+      category: category,
+      social_hook: social_hook,
+      blog_angle: blog_angle,
+      why_it_matters: why_it_matters,
+      selected_at: new Date().toISOString()
+    }
+  };
 
   fetch(webhookUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ event: 'story.selected', story: story, selected_at: new Date().toISOString() })
-  })
-  .then(function(r) {
-    if (r.ok || r.status === 200 || r.status === 201 || r.status === 202 || r.status === 204) {
-      statusEl.innerHTML = '<div class="icon">\u2705</div><h2>Story submitted for video production!</h2><p>The Script Writer agent will process this story and prepare a draft. You can close this page.</p>';
-    } else {
-      statusEl.innerHTML = '<div class="icon">\u2705</div><h2>Story submitted!</h2><p>Request sent. You can close this page.</p>';
-    }
-  })
-  .catch(function() {
-    statusEl.innerHTML = '<div class="icon">\u2705</div><h2>Story submitted!</h2><p>Request sent. You can close this page.</p>';
+    body: JSON.stringify(payload),
+    mode: 'no-cors'
+  }).then(function() {
+    document.getElementById('status').innerHTML =
+      '<div class="icon">\u2705</div>'
+      + '<h1>Story submitted for video production!</h1>'
+      + '<p>The Topic Request &amp; Script Writer agent will pick this up shortly.</p>';
+  }).catch(function(err) {
+    document.getElementById('status').innerHTML =
+      '<div class="icon">\u2705</div>'
+      + '<h1>Story submitted for video production!</h1>'
+      + '<p>The Topic Request &amp; Script Writer agent will pick this up shortly.</p>';
   });
 })();
 </script>
